@@ -1,7 +1,11 @@
 module FetchDeep
   def fetch_deep(keys)
     keys.split('.').reduce(self) do |m, key|
-      m[key.to_i] || m[key] || m[key.to_sym]
+      begin
+        m[key.to_i] || m[key] || m[key.to_sym]
+      rescue
+        nil
+      end
     end
   end
 end
@@ -10,11 +14,9 @@ class Hash
   include FetchDeep
 
   def reshape(shape)
-    {}.tap do |h|
-      shape.each do |key, val|
-        h[key] = pick_reshape_step(val)
-      end
-    end
+    shape.map do |key, val|
+      [key, pick_reshape_step(val)]
+    end.to_h
   end
 
   private
@@ -34,10 +36,6 @@ class Array
   include FetchDeep
 
   def reshape(shape)
-    [].tap do |arr|
-      each do |input|
-        arr << input.reshape(shape)
-      end
-    end
+    map { |input| input.reshape(shape) }
   end
 end
