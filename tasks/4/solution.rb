@@ -38,6 +38,13 @@ RSpec.describe 'Version' do
     expect(version.components(4)).to eq([1, 2, 3, 0])
   end
 
+  it 'is returns copy of the components' do
+    version = Version.new('1.2.3')
+    version.components << 4
+
+    expect(version).to eq v('1.2.3')
+  end
+
   context 'comparing versions' do
     it "can compare with #<=>" do
       version1 = Version.new('1.2.3.0.1')
