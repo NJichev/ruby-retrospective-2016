@@ -1,4 +1,50 @@
+module ValueParser
+  def argument_values
+    values.reject { |x| x.include? '-' }
+  end
+
+  def option_values
+    values.reject do |x|
+      !x.include?('-') ||
+        x.include?('=') ||
+        @parameter_options_prefixes.any? { |pref| x.start_with?(pref) }
+    end
+  end
+
+  def option_with_parameter_values
+    values - argument_values - option_values
+  end
+
+  def parse_arguments(runner)
+    arguments.zip(argument_values).each { |(_n, b), v| b.call(runner, v) }
+  end
+
+  def parse_options(runner)
+    option_values.each { |value| options[value].call(runner, true) }
+  end
+
+  def parse_options_with_parameter(runner)
+    option_with_parameter_values.each do |value|
+      option, val = parse_parameter_value(value)
+      options_with_parameter[option].call(runner, val)
+    end
+  end
+
+  def parse_parameter_value(value)
+    option, val = value.split('=')
+    unless val
+      val = option
+      @parameter_options_prefixes.each do |prefix|
+        option = option.slice! prefix if option.start_with? prefix
+      end
+    end
+    [option, val]
+  end
+end
+
 class CommandParser
+  include ValueParser
+
   attr_reader :command_name, :arguments, :options,
               :options_with_parameter, :values, :options_help
 
@@ -53,41 +99,6 @@ class CommandParser
     arguments.map do |name, _y|
       "[#{name}]"
     end.join(' ')
-  end
-
-  def parse_arguments(runner)
-    arguments.zip(argument_values).each { |(_n, b), v| b.call(runner, v) }
-  end
-
-  def parse_options(runner)
-    option_values.each { |value| options[value].call(runner, true) }
-  end
-
-  def parse_options_with_parameter(runner)
-    option_with_parameter_values.each do |value|
-      option, val = value.split('=')
-      unless val
-        val = option
-        @parameter_options_prefixes.each do |prefix|
-          if option.start_with? prefix
-            option = option.slice! prefix
-          end
-        end
-      end
-      options_with_parameter[option].call(runner, val)
-    end
-  end
-
-  def argument_values
-    values.reject { |x| x.include? '-' }
-  end
-
-  def option_values
-    values.reject { |x| !x.include?('-') || x.include?('=') || @parameter_options_prefixes.any? { |pref| x.start_with?(pref) }}
-  end
-
-  def option_with_parameter_values
-    values - argument_values - option_values
   end
 end
 
